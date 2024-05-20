@@ -58,6 +58,17 @@ public class JWTUtil {
                 .get("role", String.class); // 가져올 특정 필드 지정
     }
 
+    public String getCategory(String token) {
+
+        return Jwts
+                .parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("category", String.class);
+    }
+
     public Claims getPayload(String token) {
 
         Claims payload = Jwts
@@ -92,9 +103,18 @@ public class JWTUtil {
         return isExpired;
     }
 
-    public String createJwt(String username, String role, Long expiredMs) {
+    /**
+     * JWT 토큰 생성 메서드
+     * @param category 이 토큰이 access 인지 refresh 인지 나타내는 파라미터
+     * @param username
+     * @param role
+     * @param expiredMs
+     * @return
+     */
+    public String createJwt(String category, String username, String role, Long expiredMs) {
 
         return Jwts.builder()
+                .claim("category", category)
                 .claim("username", username)
                 .claim("role", role)
                 .issuedAt(new Date(System.currentTimeMillis())) // 현재 발행 시간

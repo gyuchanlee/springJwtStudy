@@ -31,36 +31,36 @@ public class JWTFilter extends OncePerRequestFilter {
 
         // request에서 Authorization Header 추출
         String authorization = request.getHeader("Authorization");
-        // Authorization 헤더 검증
+
+        // --- Authorization 헤더 검증 시작
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             log.info("JWT Token is Null");
-            // 비어있으므로 필터 종료
+            // 비어있으므로 필터 종료 -> 다음 필터로 넘김
             filterChain.doFilter(request, response);
             return;
         }
         // Bearer - 삭제
-        log.info("authorization: {}", authorization);
         String token = authorization.split(" ")[1];
-        log.info("token: {}", token);
-        // 토큰 만료 시간 검증
-        if (jwtUtil.isExpired(token)) {
-            // 리프레시 토큰 만료 여부 검증
-            String refresh = request.getHeader("Refresh").split(" ")[1];
-            if (jwtUtil.isExpired(refresh)) {
-                log.info("JWT Token is Expired");
-                filterChain.doFilter(request, response);
-                return;
-            }
-            log.info("어세스 토큰 재발급 중...");
-            // 어세스 토큰 다시 만들어서 보내주기
-            String username = jwtUtil.getUsername(refresh);
-            String role = jwtUtil.getRole(refresh);
-            String newToken = jwtUtil.createJwt(username, role, 60 * 60 * 10L);
-            response.addHeader("Authorization", "Bearer " + newToken);
-            token = newToken;
-            // 요거는 react axios에 인터셉터로 헤더 검증해서 Authorization 가 있으면 어세스토큰 redux persist에 저장하는 거 구현하면 될듯함.
+        log.info("token:'{}'", token);
 
+        // 토큰 만료 시간 검증 -> 만료 시, 다음 필터로 넘기지 않고 만료 예외를 던져줌
+        if (jwtUtil.isExpired(token)) {
+            // 만료 응답
+            response.getWriter().print("access token expired");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
         }
+
+        // access토큰인지 확인 -> 아니면 다음 필터로 넘기지 않고 예외 던짐
+        String category = jwtUtil.getCategory(token);
+        log.info("category:'{}'", category);
+        if (!category.equals("access")) {
+            // 응답
+            response.getWriter().print("invalid access token");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
+        // --- Authorization 헤더 검증 끝
 
         // 검증된 토큰을 가진 요청에 일시적인 시큐리티 세션 저장
         String username = jwtUtil.getUsername(token);

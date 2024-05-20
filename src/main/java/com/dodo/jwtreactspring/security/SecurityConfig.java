@@ -1,9 +1,11 @@
 package com.dodo.jwtreactspring.security;
 
 import com.dodo.jwtreactspring.entity.Role;
+import com.dodo.jwtreactspring.jwt.CustomLogoutFilter;
 import com.dodo.jwtreactspring.jwt.JWTFilter;
 import com.dodo.jwtreactspring.jwt.JWTUtil;
 import com.dodo.jwtreactspring.jwt.LoginFilter;
+import com.dodo.jwtreactspring.repository.RefreshTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -21,6 +23,7 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.logout.LogoutFilter;
 import org.springframework.web.cors.CorsConfiguration;
 
 import java.util.Collections;
@@ -33,6 +36,7 @@ public class SecurityConfig {
 
     private final AuthenticationConfiguration authenticationConfiguration;
     private final JWTUtil jwtUtil;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -61,17 +65,21 @@ public class SecurityConfig {
         // 경로 별 인가 작업
         http
                 .authorizeHttpRequests((auth) -> auth
-                        .requestMatchers("/login", "/").permitAll()
+                        .requestMatchers("/login", "/", "/logout").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users").permitAll() // 회원 가입
                         .requestMatchers("/test", "/users/**").hasRole(Role.USER.getValue())
                         .requestMatchers("/admin").hasRole(Role.ADMIN.getValue())
+                        .requestMatchers(HttpMethod.POST, "/reissue").permitAll() // 리프레시 토큰 재발급 경로
                         .anyRequest().authenticated());
         // LoginFilter : formLogin을 꺼서 작동하지 않는 username/password 검증 필터 대신 작동함.
         http
                 .addFilterBefore(new JWTFilter(jwtUtil), LoginFilter.class);
         http
-                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil),
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil, refreshTokenRepository),
                         UsernamePasswordAuthenticationFilter.class);
+        // jwt 전용 logout 필터
+        http
+                .addFilterBefore(new CustomLogoutFilter(jwtUtil, refreshTokenRepository), LogoutFilter.class);
         // 세션 설정 -> JWT를 위해 반드시 무상태 설정하기
         http
                 .sessionManagement((session) -> session

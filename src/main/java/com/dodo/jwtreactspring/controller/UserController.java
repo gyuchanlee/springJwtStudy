@@ -3,7 +3,6 @@ package com.dodo.jwtreactspring.controller;
 import com.dodo.jwtreactspring.dto.CustomUserDetails;
 import com.dodo.jwtreactspring.dto.UserJoinDto;
 import com.dodo.jwtreactspring.entity.User;
-import com.dodo.jwtreactspring.repository.UserRepository;
 import com.dodo.jwtreactspring.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,13 +10,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 @Slf4j
 @RestController
